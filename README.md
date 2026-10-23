@@ -41,7 +41,10 @@ figures in `herc_static_audit.json` are counted on the model itself, not simulat
 | frozen segmenter + corrector | `nets/HERCUNet.py` → `HERCUNet` |
 | recovery, harm, precision (Section 3.5) | `evaluation/herc_metrics.py` |
 
-The full old-to-new identifier table is in [NAMING.md](NAMING.md).
+Identifiers follow the manuscript: the method is `HERC`, tensors use the paper
+symbols (`severity`, `route_weights`, `eta`, `r_fn`, `r_h`), the four experts are
+`<Action><Verb>Expert`, and every configuration knob is reachable through a
+`HERC_*` environment variable. See [Code conventions](#10-code-conventions).
 
 ## 2. Pipeline position
 
@@ -71,15 +74,8 @@ Standard SSDMoE calls receive exactly the original output.
 ```text
 HERC/
 ├── README.md                     this file
-├── NAMING.md                     naming convention and full rename table
-├── HERC_DESIGN.md                design rationale
-├── HERC_CODE_AUDIT.md            tensor, parameter, compute and memory audit
-├── HERC_VERIFICATION.md          what was verified and what was not
-├── HERC_FIXES_APPLIED.md         defect audit of the delivered package
-├── HERC_INTEGRATION_DIFF.md      integration diff against the SSDMoE baseline
+├── DESIGN.md                     design rationale: why four typed actions
 ├── herc_static_audit.json        parameter/compute audit output (17,678 params)
-├── legacy/
-│   └── qa/verify_rename.py       checks that the rename is identifier-only
 ├── evaluation/
 │   └── herc_metrics.py           recovery / harm / precision, hierarchy violations
 └── umamba/nnunetv2/
@@ -200,11 +196,60 @@ state['network_weights'] = {
 torch.save(state, 'checkpoint_final.herc.pth')
 ```
 
-## 9. Verification
+## 9. Cost and resources
 
-`HERC_CODE_AUDIT.md` reports the parameter, compute and memory audit;
-`HERC_VERIFICATION.md` lists what passed and what still requires the real GPU
-environment; `herc_static_audit.json` is the machine-readable audit output:
+Parameter budget of the shared cell, counted on the region-mode model
+(`herc_static_audit.json`):
+
+| Component | Parameters |
+|---|---:|
+| diagnosis | 7,078 |
+| false-negative expert | 2,979 |
+| false-positive expert | 2,979 |
+| hierarchy correction expert | 3,004 |
+| boundary correction expert | 1,638 |
+| **total, added by HERC** | **17,678** |
+
+Against the reported 157.21 M SSDMoE-UNet baseline this is +0.0177 M, i.e. about
+157.23 M in total, and a 3.5% increase in forward latency at two steps.
+
+Convolution-dominated cost at `128³`, batch one, with 64/32 decoder taps
+(MACs only; interpolation, pooling, activations and morphology excluded):
+
+| Setting | GMAC |
+|---|---:|
+| static projections, once | 1.074 |
+| dynamic cell, per step | 5.870 |
+| T = 1 | 6.944 |
+| **T = 2 (primary)** | **12.814** |
+| T = 3 | 18.684 |
+
+Under the strict two-operation convention T = 2 is about 25.63 GFLOPs.
+
+Activation budget: the unique saved spatial activations of the T = 2 AMP graph are
+about 0.69 GiB (0.89 GiB counting saved references), so the correction branch adds
+roughly 1.0–1.5 GiB of backward overhead on top of the frozen baseline forward.
+Estimated peaks follow from that: about 4.5–6.0 GiB when only HERC trains, ~7–10
+GiB if the final decoder stage is also opened, and 12.5 GiB or more if the SSD-MoE
+bottleneck is unfrozen, which is therefore not the default. All of these are
+analytical estimates, not CUDA measurements.
+
+## 10. Code conventions
+
+- the method is `HERC`, never abbreviated in identifiers except in tensor keys;
+- modules are 3D by construction, so class names carry no topology suffix
+  (`ConvNormAct`, not `ConvNormAct3d`);
+- experts are named after the action they perform
+  (`BoundaryCorrectionExpert`, not `FullResolutionBoundaryExpert3D`);
+- the correction sub-module is reachable as `model.herc` and owns `herc.*` weights;
+- every setting has a `HERC_<NAME>` environment variable (Section 7);
+- one module docstring per file states which section of the manuscript it
+  implements.
+
+## 11. Verification
+
+`herc_static_audit.json` is the machine-readable parameter and compute audit; the
+two shipped tests and the audit script can be rerun with:
 
 ```bash
 python -m nnunetv2.run.run_herc_static_audit --patch 128 --steps 2 --json herc_static_audit.json
@@ -212,5 +257,10 @@ python -m nnunetv2.tests.herc.test_herc_core
 python -m nnunetv2.tests.herc.test_herc_loss
 ```
 
-The full SSDMoE forward requires `mamba_ssm`, `dynamic-network-architectures`,
-`batchgenerators` and `acvl-utils`, which are not part of this package.
+Verified on the released tree: all 188 Python modules parse and their
+intra-project imports resolve; every configuration and loss default is the value
+reported in Section 5; the layer construction reproduces the parameter table of
+Section 9. Not verified here: an end-to-end forward and backward pass, because the
+full SSDMoE forward requires `mamba_ssm`, `dynamic-network-architectures`,
+`batchgenerators` and `acvl-utils` plus a CUDA device, none of which are part of
+this package.

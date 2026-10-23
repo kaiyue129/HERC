@@ -1,4 +1,4 @@
-.idea/
+﻿.idea/
 **/.idea/
 __pycache__/
 *.pyc
@@ -7,5 +7,7 @@ __pycache__/
 *.tmp
 .DS_Store
 Thumbs.db
-# local only: historical pre-rename diff
-legacy/FAIL2CORRECT_pre_rename.patch
+
+# local only: pre-rename artefacts, internal audit reports
+legacy/
+

@@ -1,5 +1,8 @@
 # HERC design rationale
 
+Why the corrector is built the way it is. See [README.md](README.md) for the
+manuscript-to-code map, the reported defaults and the training instructions.
+
 ## Central claim
 
 The second stage should **not segment the tumor again**.
