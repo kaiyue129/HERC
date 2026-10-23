@@ -1,0 +1,336 @@
+{
+  "config": {
+    "num_outputs": 3,
+    "has_regions": true,
+    "wt_index": 0,
+    "tc_index": 1,
+    "et_index": 2,
+    "diagnosis_feature_channels": 32,
+    "diagnosis_hidden_channels": 32,
+    "coarse_checkpoint": true,
+    "expert_hidden_channels": 24,
+    "semantic_residual_bound": 2.0,
+    "boundary_feature_channels": 8,
+    "boundary_hidden_channels": 8,
+    "boundary_residual_bound": 1.5,
+    "boundary_radius": 1,
+    "boundary_checkpoint": true,
+    "train_steps": 2,
+    "max_inference_steps": 3,
+    "adaptive_stopping": true,
+    "stopping_threshold": 0.025,
+    "stopping_topk_fraction": 0.02,
+    "min_step_size": 0.05,
+    "max_step_size": 1.0,
+    "global_update_bound": 2.0,
+    "eps": 1e-06,
+    "align_corners": false
+  },
+  "parameters_total": 17678,
+  "parameter_breakdown": {
+    "diagnosis": 7078,
+    "fn_expert": 2979,
+    "fp_expert": 2979,
+    "hierarchy_expert": 3004,
+    "boundary_expert": 1638
+  },
+  "analytical_convolution_complexity": {
+    "static_gmac": 1.073741824,
+    "dynamic_per_step_gmac": 5.869928976,
+    "total_gmac": 12.813599776,
+    "strict_gflops_2_per_mac": 25.627199552
+  },
+  "tensor_footprint": [
+    {
+      "name": "MRI input",
+      "shape": [
+        1,
+        4,
+        128,
+        128,
+        128
+      ],
+      "elements": 8388608,
+      "fp16_mib": 16.0,
+      "fp32_mib": 32.0
+    },
+    {
+      "name": "segmenter logits",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    },
+    {
+      "name": "decoder_coarse",
+      "shape": [
+        1,
+        64,
+        64,
+        64,
+        64
+      ],
+      "elements": 16777216,
+      "fp16_mib": 32.0,
+      "fp32_mib": 64.0
+    },
+    {
+      "name": "decoder_full",
+      "shape": [
+        1,
+        32,
+        128,
+        128,
+        128
+      ],
+      "elements": 67108864,
+      "fp16_mib": 128.0,
+      "fp32_mib": 256.0
+    },
+    {
+      "name": "diagnosis projected",
+      "shape": [
+        1,
+        32,
+        64,
+        64,
+        64
+      ],
+      "elements": 8388608,
+      "fp16_mib": 16.0,
+      "fp32_mib": 32.0
+    },
+    {
+      "name": "diagnosis concat",
+      "shape": [
+        1,
+        39,
+        64,
+        64,
+        64
+      ],
+      "elements": 10223616,
+      "fp16_mib": 19.5,
+      "fp32_mib": 39.0
+    },
+    {
+      "name": "diagnosis context",
+      "shape": [
+        1,
+        32,
+        64,
+        64,
+        64
+      ],
+      "elements": 8388608,
+      "fp16_mib": 16.0,
+      "fp32_mib": 32.0
+    },
+    {
+      "name": "severity",
+      "shape": [
+        1,
+        1,
+        64,
+        64,
+        64
+      ],
+      "elements": 262144,
+      "fp16_mib": 0.5,
+      "fp32_mib": 1.0
+    },
+    {
+      "name": "route weights",
+      "shape": [
+        1,
+        4,
+        64,
+        64,
+        64
+      ],
+      "elements": 1048576,
+      "fp16_mib": 2.0,
+      "fp32_mib": 4.0
+    },
+    {
+      "name": "expert input",
+      "shape": [
+        1,
+        35,
+        64,
+        64,
+        64
+      ],
+      "elements": 9175040,
+      "fp16_mib": 17.5,
+      "fp32_mib": 35.0
+    },
+    {
+      "name": "semantic residual",
+      "shape": [
+        1,
+        3,
+        64,
+        64,
+        64
+      ],
+      "elements": 786432,
+      "fp16_mib": 1.5,
+      "fp32_mib": 3.0
+    },
+    {
+      "name": "semantic residual upsampled",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    },
+    {
+      "name": "boundary projected",
+      "shape": [
+        1,
+        8,
+        128,
+        128,
+        128
+      ],
+      "elements": 16777216,
+      "fp16_mib": 32.0,
+      "fp32_mib": 64.0
+    },
+    {
+      "name": "boundary probabilities",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    },
+    {
+      "name": "soft morphological band",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    },
+    {
+      "name": "boundary route",
+      "shape": [
+        1,
+        1,
+        128,
+        128,
+        128
+      ],
+      "elements": 2097152,
+      "fp16_mib": 4.0,
+      "fp32_mib": 8.0
+    },
+    {
+      "name": "MRI gradient",
+      "shape": [
+        1,
+        1,
+        128,
+        128,
+        128
+      ],
+      "elements": 2097152,
+      "fp16_mib": 4.0,
+      "fp32_mib": 8.0
+    },
+    {
+      "name": "boundary concat",
+      "shape": [
+        1,
+        16,
+        128,
+        128,
+        128
+      ],
+      "elements": 33554432,
+      "fp16_mib": 64.0,
+      "fp32_mib": 128.0
+    },
+    {
+      "name": "boundary hidden",
+      "shape": [
+        1,
+        8,
+        128,
+        128,
+        128
+      ],
+      "elements": 16777216,
+      "fp16_mib": 32.0,
+      "fp32_mib": 64.0
+    },
+    {
+      "name": "boundary raw out+in",
+      "shape": [
+        1,
+        6,
+        128,
+        128,
+        128
+      ],
+      "elements": 12582912,
+      "fp16_mib": 24.0,
+      "fp32_mib": 48.0
+    },
+    {
+      "name": "boundary residual",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    },
+    {
+      "name": "final delta",
+      "shape": [
+        1,
+        3,
+        128,
+        128,
+        128
+      ],
+      "elements": 6291456,
+      "fp16_mib": 12.0,
+      "fp32_mib": 24.0
+    }
+  ],
+  "notes": [
+    "GMAC counts convolution/linear multiply-accumulate operations; interpolation, pooling, activations and elementwise ops are omitted.",
+    "strict_gflops_2_per_mac reports the convention where one multiply and one add count as two FLOPs.",
+    "For comparison with the reported SSDMoE GFLOPs, rerun the exact same profiler used for the baseline."
+  ]
+}

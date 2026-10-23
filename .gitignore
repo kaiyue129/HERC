@@ -1,0 +1,11 @@
+.idea/
+**/.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.tmp
+.DS_Store
+Thumbs.db
+# local only: historical pre-rename diff
+legacy/FAIL2CORRECT_pre_rename.patch
