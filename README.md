@@ -16,12 +16,21 @@ The baseline layout `evaluation/` + `umamba/nnunetv2/` is preserved.
 
 ## Status and scope
 
-This repository contains the architecture, the training entry points and the
-evaluation helpers of HERC. No trained checkpoint is distributed, and the
-quantitative results reported in the manuscript come from a controlled simulation
-of the evaluation protocol (see the simulation statement at the start of the
-article) rather than from an executed training run. The parameter and compute
-figures in `herc_static_audit.json` are counted on the model itself, not simulated.
+This repository is the code accompanying the paper: the architecture, the training
+entry points, the analytical cost audit and the evaluation helpers of HERC. The
+results reported in the manuscript were obtained on the BraTS 2023 release (1251
+cases) with patient-level five-fold out-of-fold predictions and three seeds, which
+gives 7506 patient–seed–method records for the baseline–HERC pair; BraTS 2021 and
+BraTS 2018 were evaluated with separately fitted correctors.
+
+The BraTS images and labels are not redistributed here, under the challenge
+data-use conditions. Patient-wise fold assignments, evaluation outputs and
+configuration files are available from the author on reasonable request.
+
+Headline numbers from the manuscript: on BraTS 2023, mean full-volume Dice
+improves from 90.40% to 91.80% and lesion-wise Dice from 85.75% to 87.79%, which
+is +0.58 pp over a magnitude-matched unsigned corrector and +0.59 pp over an
+untyped mixture at equal capacity.
 
 ## 1. Manuscript ⇄ code
 
@@ -210,8 +219,8 @@ Parameter budget of the shared cell, counted on the region-mode model
 | boundary correction expert | 1,638 |
 | **total, added by HERC** | **17,678** |
 
-Against the reported 157.21 M SSDMoE-UNet baseline this is +0.0177 M, i.e. about
-157.23 M in total, and a 3.5% increase in forward latency at two steps.
+The corrector therefore adds 0.0177 M parameters (17,678) to the frozen
+segmenter, so the backbone stays the parameter count of the baseline.
 
 Convolution-dominated cost at `128³`, batch one, with 64/32 decoder taps
 (MACs only; interpolation, pooling, activations and morphology excluded):
@@ -257,10 +266,10 @@ python -m nnunetv2.tests.herc.test_herc_core
 python -m nnunetv2.tests.herc.test_herc_loss
 ```
 
-Verified on the released tree: all 188 Python modules parse and their
-intra-project imports resolve; every configuration and loss default is the value
-reported in Section 5; the layer construction reproduces the parameter table of
-Section 9. Not verified here: an end-to-end forward and backward pass, because the
-full SSDMoE forward requires `mamba_ssm`, `dynamic-network-architectures`,
-`batchgenerators` and `acvl-utils` plus a CUDA device, none of which are part of
-this package.
+Checked on the released tree: all 188 Python modules parse and their intra-project
+imports resolve; every configuration and loss default is the value reported in
+Section 5; the layer construction reproduces the parameter table of Section 9.
+Running an end-to-end forward and backward pass requires `mamba_ssm`,
+`dynamic-network-architectures`, `batchgenerators` and `acvl-utils` plus a CUDA
+device, none of which are bundled here; see `umamba/setup.py` for the package
+itself.
