@@ -144,7 +144,7 @@ class HERCUNet(SSDMoEUNet):
         Args:
             x: Input patch ``[B, C, D, H, W]``.
             return_aux: Return the diagnostic dictionary instead of the outputs.
-            synthetic_error_target: Reference used by the warm-up phase to inject
+            synthetic_error_target: Reference used by the optional typed-error warm-up to inject
                 a typed error into the initial logits.
             synthetic_error_type: Error type of the warm-up injection.
             correction_steps: Overrides the configured number of steps.

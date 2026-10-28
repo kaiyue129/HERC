@@ -2,14 +2,15 @@
 
 HERC (Heterogeneous Error Routing and Correction) attaches one shared correction
 cell to a frozen segmenter.  The defaults reproduce the configuration reported in
-Section 3.2 of the manuscript:
+Sections 3.2.2-3.2.5 of the manuscript:
 
 * three nested BraTS regions (WT, TC, ET) predicted by independent sigmoid heads,
 * a 64^3 diagnostic stage and a 128^3 boundary stage,
 * a semantic bound b_s = 2.0, a boundary bound b_b = 1.5 and a trust-region
   bound b_g = 2.0 (Equation 4),
 * a step size ``eta`` in [0.05, 1.0],
-* two correction steps for training and at most three at inference.
+* two correction steps as the primary configuration, with one and three steps
+  as iteration controls.
 """
 
 from __future__ import annotations

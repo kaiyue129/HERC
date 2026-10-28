@@ -1,4 +1,4 @@
-"""Typed experts of the HERC correction cell (Section 3.2, Figure 3).
+"""Typed experts of the HERC correction cell (Sections 3.2.3-3.2.4, Figure 3).
 
 Three semantic experts act at the coarse resolution and the boundary expert acts
 at the full resolution.  The sign restrictions are properties of the individual

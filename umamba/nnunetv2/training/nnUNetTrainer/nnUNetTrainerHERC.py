@@ -1,11 +1,14 @@
 """nnU-Net trainers for the HERC correction stage.
 
 Section 3.3 of the manuscript trains the corrector while the segmenter stays
-frozen: four-channel 128^3 patches, batch size one, 250 patch draws per epoch for
-200 epochs, SGD with Nesterov momentum 0.99, an initial learning rate of 1e-2, a
-weight decay of 3e-5 and a polynomial decay with exponent 0.9.  The three trainers
-below implement the natural-error phase, the typed-error warm-up and the optional
-joint fine-tuning phase.
+frozen: four-channel 128^3 patches, batch size one, 250 patch draws per epoch, 500
+epochs per fold-specific run (125,000 optimizer steps), SGD with Nesterov momentum
+0.99, an initial learning rate of 1e-2, a weight decay of 3e-5 and a polynomial
+decay with exponent 0.9.
+
+:class:`nnUNetTrainerHERC` reproduces that configuration.  The warm-up and joint
+variants in this module are additional entry points and are not part of the
+reported configuration.
 
 The trainers read their settings from ``HERC_*`` environment variables so that one
 code path covers every reported configuration.
@@ -331,7 +334,10 @@ class nnUNetTrainerHERC(nnUNetTrainerSSDMoEUNet):
 
 
 class nnUNetTrainerHERCWarmup(nnUNetTrainerHERC):
-    """Warm-up phase: teach the corrective operators explicit typed errors."""
+    """Optional entry point: train the corrective operators on typed errors.
+
+    Not used by the reported configuration.
+    """
 
     use_synthetic_error_warmup = True
     joint_level = 0
@@ -344,7 +350,10 @@ class nnUNetTrainerHERCWarmup(nnUNetTrainerHERC):
 
 
 class nnUNetTrainerHERCJoint(nnUNetTrainerHERC):
-    """Joint phase: conservative fine-tuning once the frozen-baseline correction converged."""
+    """Optional entry point: conservative joint fine-tuning of the correction stage.
+
+    Not used by the reported configuration.
+    """
 
     use_synthetic_error_warmup = False
     joint_level = 2

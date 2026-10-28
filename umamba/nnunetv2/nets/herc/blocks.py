@@ -70,7 +70,7 @@ class ResidualStem(nn.Module):
 class ContextStem(nn.Module):
     """Low-compute context extractor: 1x1 projection plus depthwise 3x3x3 mixing.
 
-    Section 3.2 of the manuscript describes this stem as "pointwise and
+    Section 3.2.2 of the manuscript describes this stem as "pointwise and
     depthwise 3 x 3 x 3 convolutions".
     """
 

@@ -1,6 +1,6 @@
 """Supervision targets of the HERC correction cell.
 
-Section 3.2 of the manuscript states that supervision is generated from the
+Section 3.2.5 of the manuscript states that supervision is generated from the
 current prediction and the reference at every step.  The severity target is the
 maximum absolute region error, and the unnormalised route targets are the
 per-region false-negative and false-positive evidence, the hierarchy violation

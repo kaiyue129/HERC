@@ -1,9 +1,11 @@
-"""Typed-error augmentation used by the warm-up phase of HERC.
+"""Typed-error augmentation for the optional warm-up entry point.
 
-The warm-up teaches the corrective operators on explicit, typed errors: a missed
-region (FN), a spurious region (FP), a nesting violation and a boundary
-displacement.  These are error-space perturbations of the logits, not random
-image noise, so every step targets one of the four actions of Figure 1.
+The augmentation teaches the corrective operators on explicit, typed errors: a
+missed region (FN), a spurious region (FP), a nesting violation and a boundary
+displacement.  These are error-space perturbations of the logits, not image noise.
+
+The reported configuration trains on the natural residual errors of the frozen
+segmenter and does not use this module.
 """
 
 from __future__ import annotations
@@ -13,7 +15,7 @@ import random
 import torch
 import torch.nn.functional as F
 
-#: Error types available in the warm-up phase, in route order.
+#: Error types available to the optional warm-up entry point, in route order.
 ERROR_TYPES = ('fn', 'fp', 'hierarchy', 'boundary')
 
 #: Error types of the atomic fallback, where nesting is replaced by confusion.

@@ -1,14 +1,14 @@
 """Objective of the HERC correction cell (Equation 5 of the manuscript).
 
 The exact nnU-Net Dice + BCE/CE primitive (including deep supervision) remains the
-main loss; the auxiliary terms supervise the diagnosis and keep the iterative
+main loss; the six auxiliary terms supervise the diagnosis and keep the iterative
 correction safe:
 
 ``L = L_seg + lambda_s L_sev + lambda_r L_route + lambda_b L_bd
-      + lambda_m L_mono + lambda_safe L_safe + lambda_h L_hyd``
+      + lambda_m L_mono + lambda_safe L_safe + lambda_h L_hier``
 
-The two additional terms, ``L_anchor`` and ``L_coarse``, are joint-phase
-regularisers that are disabled by default (``lambda_anchor = lambda_coarse = 0``).
+Two further terms, ``L_anchor`` and ``L_coarse``, are optional additions that are
+disabled by default (``lambda_anchor = lambda_coarse = 0``).
 """
 
 from __future__ import annotations
@@ -97,7 +97,7 @@ class HERCCompositeLoss(nn.Module):
             segmentation loss between adjacent steps.
         lambda_safety: Weight of ``L_safe``, which anchors the final loss to the
             initial prediction.
-        lambda_hierarchy: Weight of ``L_hyd``, the hierarchy violation rate.
+        lambda_hierarchy: Weight of ``L_hier``, the hierarchy violation rate.
         lambda_anchor: Weight of the joint-phase preservation anchor.
         lambda_coarse: Weight of the joint-phase coarse-branch supervision.
         boundary_radius: Radius of the reference boundary band.

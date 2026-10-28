@@ -2,26 +2,34 @@
 
 Implementation of the correction module described in
 
-> **HERC: Action-Constrained Correction of Residual Errors in Multi-Region Brain
-> Tumor Segmentation** — Kaiyue Li, *Appl. Sci.* (submitted).
+> **HERC: Action-Constrained Residual Correction for Multi-Region Brain Tumor
+> Segmentation** — Kaiyue Li, *Appl. Sci.* (submitted).
 
 HERC attaches **one shared correction cell** to a frozen 3D segmenter. Residual
 errors of the initial prediction are typed into four actions — false-negative
 recovery, false-positive suppression, hierarchy correction and boundary
-correction — and a bounded logit update is applied, bounded in a trust region and
-re-diagnosed at the next step. The complete module adds **17,678 parameters**.
+correction — and a bounded logit update is applied and re-diagnosed at the next
+step. The complete module adds **17,678 parameters**.
 
 The repository is the SSDMoE-UNet project (nnU-Net v2 based) extended with HERC.
 The baseline layout `evaluation/` + `umamba/nnunetv2/` is preserved.
 
 ## Status and scope
 
-This repository is the code accompanying the paper: the architecture, the training
-entry points, the analytical cost audit and the evaluation helpers of HERC. The
-results reported in the manuscript were obtained on the BraTS 2023 release (1251
-cases) with patient-level five-fold out-of-fold predictions and three seeds, which
-gives 7506 patient–seed–method records for the baseline–HERC pair; BraTS 2021 and
-BraTS 2018 were evaluated with separately fitted correctors.
+This repository is the code accompanying the paper: the correction module, the
+training entry points, the analytical cost audit and the evaluation helpers of
+HERC.
+
+The primary evaluation used 1251 cases from BraTS 2023. The SSDMoE-UNet baseline
+and the HERC correction stage were trained exclusively on that release, with
+patient-wise nnU-Net-style five-fold training repeated over three independent
+random seeds, and 500 epochs for every fold-specific run. Within one seed the five
+fold-specific baseline–HERC pipelines are combined through the nnU-Net-style
+prediction procedure, which yields one ensemble-level prediction per case; the
+reported values are the mean and standard deviation over the three seeds. BraTS
+2021 and BraTS 2018 were evaluated with the same trained models, without
+retraining, fine-tuning or release-specific fitting. HERC was also fitted
+separately for the other three initial segmenters (SegResNet, LGA-Net, Ga-U-Net).
 
 The BraTS images and labels are not redistributed here, under the challenge
 data-use conditions. Patient-wise fold assignments, evaluation outputs and
@@ -36,7 +44,7 @@ untyped mixture at equal capacity.
 
 | Manuscript (Section 3.2, Figures 2–3) | Code |
 |---|---|
-| shared correction cell, applied twice | `nets/herc/cell.py` → `HERCCell`, `HERCCorrector` |
+| shared correction cell, reused for two steps | `nets/herc/cell.py` → `HERCCell`, `HERCCorrector` |
 | diagnosis at 64³ (severity, routes, step size) | `nets/herc/diagnosis.py` → `HERCDiagnosis` |
 | four diagnostic cues, Equation 1 | `nets/herc/cues.py` |
 | severity map `m_t`, route weights `w_t`, step size `eta_t` | keys `severity`, `route_weights`, `eta` |
@@ -46,14 +54,13 @@ untyped mixture at equal capacity.
 | boundary correction expert at 128³, soft band | `BoundaryCorrectionExpert` |
 | route targets from prediction and reference | `nets/herc/targets.py` → `build_route_targets` |
 | Equation 5 objective | `training/loss/herc_loss.py` → `HERCCompositeLoss` |
-| typed-error warm-up | `nets/herc/error_augmentation.py`, `nnUNetTrainerHERCWarmup` |
 | frozen segmenter + corrector | `nets/HERCUNet.py` → `HERCUNet` |
 | recovery, harm, precision (Section 3.5) | `evaluation/herc_metrics.py` |
 
 Identifiers follow the manuscript: the method is `HERC`, tensors use the paper
-symbols (`severity`, `route_weights`, `eta`, `r_fn`, `r_h`), the four experts are
-`<Action><Verb>Expert`, and every configuration knob is reachable through a
-`HERC_*` environment variable. See [Code conventions](#10-code-conventions).
+symbols (`severity`, `route_weights`, `eta`, `r_fn`, `r_h`), and the four experts
+are named after the action they perform. See
+[Code conventions](#10-code-conventions).
 
 ## 2. Pipeline position
 
@@ -99,7 +106,7 @@ HERC/
     │       ├── diagnosis.py      HERCDiagnosis
     │       ├── experts.py        the four typed experts
     │       ├── cell.py           HERCCell, HERCCorrector
-    │       └── error_augmentation.py  typed-error injection for the warm-up
+    │       └── error_augmentation.py  typed-error injection helper
     ├── training/
     │   ├── loss/herc_loss.py     HERCCompositeLoss
     │   └── nnUNetTrainer/nnUNetTrainerHERC.py
@@ -120,10 +127,9 @@ head 0 = WT,  head 1 = TC,  head 2 = ET        ET ⊆ TC ⊆ WT
 => P(WT) >= P(TC) >= P(ET)
 ```
 
-HERC is region-aware by default; the trainer infers the WT/TC/ET head indices from
-`label_manager.foreground_regions` instead of assuming channel order. The third
-expert is therefore a hierarchy correction expert, not a generic class-confusion
-module. An atomic multiclass fallback is retained for non-region datasets.
+HERC is region-aware: the trainer infers the WT/TC/ET head indices from
+`label_manager.foreground_regions` instead of assuming channel order, so the third
+expert is a hierarchy correction expert rather than a class-confusion module.
 
 Route order, shared by diagnosis, targets and metrics:
 
@@ -142,38 +148,33 @@ Route order, shared by diagnosis, targets and metrics:
 | boundary bound `b_b` | 1.5 | `boundary_residual_bound` |
 | trust-region bound `b_g` | 2.0 | `global_update_bound` |
 | step size `eta` range | [0.05, 1.0] | `min_step_size`, `max_step_size` |
-| train / inference steps | 2 / ≤3 | `train_steps`, `max_inference_steps` |
+| correction steps | 2 | `train_steps` |
 | band radius | 1 | `boundary_radius` |
 | loss weights `λ_s, λ_r, λ_b, λ_m, λ_safe, λ_h` | 0.20, 0.10, 0.10, 0.20, 0.10, 0.05 | `HERCCompositeLoss` |
 
-## 6. Training phases
+## 6. Training and inference
 
-| Phase | Trainer | Frozen | Steps | Epochs |
-|---|---|---|---|---|
-| typed-error warm-up | `nnUNetTrainerHERCWarmup` | backbone | 1 | 50 |
-| natural residual errors (primary) | `nnUNetTrainerHERC` | backbone | 2 | 200 |
-| joint fine-tuning (optional) | `nnUNetTrainerHERCJoint` | late decoder + heads | 2 | 100 |
-
-Warm-up errors are not image noise: the augmentation injects FN, FP, hierarchy
-violation and boundary displacement into the logits of the frozen segmenter.
+As reported in Section 3.3: four-channel `128³` patches, batch size one, 250 patch
+draws per epoch, 500 epochs for every fold-specific run of each of the three seeds,
+which is 125,000 optimizer steps per run. SGD with Nesterov momentum 0.99, initial
+learning rate `1e-2`, weight decay `3e-5`, polynomial decay exponent 0.9, mixed
+precision, gradient clipping at L2 norm 1.0, and the region-based nnU-Net
+augmentation policy unmodified. The held-out fold is removed first and the
+remaining 80% of patients is split 4:1 by patient into correction training and
+inner validation; the retained checkpoint maximises exponential-moving-average
+foreground Dice on that inner split. Two correction steps run inside each
+fold-specific pipeline, and at inference the five fold-specific pipelines of a seed
+are combined through the nnU-Net-style prediction procedure.
 
 ```bash
-nnUNetv2_train DATASET_ID 3d_fullres 0 \
-  -tr nnUNetTrainerHERCWarmup \
-  -pretrained_weights /path/to/SSDMoE/checkpoint_final.pth
-
-nnUNetv2_train DATASET_ID 3d_fullres 0 \
+nnUNetv2_train DATASET_ID 3d_fullres FOLD \
   -tr nnUNetTrainerHERC \
-  -pretrained_weights /path/to/warmup/checkpoint_final.pth
-
-HERC_JOINT_LEVEL=2 nnUNetv2_train DATASET_ID 3d_fullres 0 \
-  -tr nnUNetTrainerHERCJoint \
-  -pretrained_weights /path/to/natural/checkpoint_final.pth
+  -pretrained_weights /path/to/SSDMoE/checkpoint_final.pth
 ```
 
 ## 7. Environment variables
 
-All settings are reachable through `HERC_*` variables:
+The settings of Section 5 and 6 are reachable through `HERC_*` variables:
 
 ```text
 HERC_EPOCHS                    HERC_LR                       HERC_WEIGHT_DECAY
@@ -181,29 +182,15 @@ HERC_TRAIN_STEPS               HERC_MAX_INFERENCE_STEPS      HERC_ADAPTIVE_STOP
 HERC_STOP_THRESHOLD            HERC_STOP_TOPK_FRACTION
 HERC_LAMBDA_SEVERITY           HERC_LAMBDA_ROUTE             HERC_LAMBDA_BOUNDARY
 HERC_LAMBDA_MONOTONIC          HERC_LAMBDA_SAFETY            HERC_LAMBDA_HIERARCHY
-HERC_LAMBDA_ANCHOR             HERC_LAMBDA_COARSE            HERC_JOINT_LEVEL
-HERC_JOINT_DECODER_STAGES      HERC_HEAD_LR_RATIO            HERC_DECODER_LR_RATIO
-HERC_GSAF_LR_RATIO             HERC_TUNE_SSDMOE
-HERC_SSDMOE_LR_RATIO           HERC_SSDMOE_ROUTING_LR_RATIO
 ```
 
 ## 8. Checkpoint compatibility
 
-`run/load_pretrained_weights.py` loads a baseline SSDMoE checkpoint into
-`HERCUNet`: all shared keys are shape-checked, and the absent `herc.*` keys are
-allowed. Note that the correction prefix changed during the rename, so a
-checkpoint written by the pre-rename code needs one remapping step:
-
-```python
-import torch
-
-state = torch.load('checkpoint_final.pth', map_location='cpu')
-state['network_weights'] = {
-    k.replace('fail2correct.', 'herc.', 1): v
-    for k, v in state['network_weights'].items()
-}
-torch.save(state, 'checkpoint_final.herc.pth')
-```
+`run/load_pretrained_weights.py` loads a fold-specific baseline checkpoint into
+`HERCUNet`: every shared key is shape-checked, and the absent `herc.*` keys are
+accepted, so the correction stage starts from the trained backbone. The backbone
+keys themselves are unchanged (`encoder.*`, `gsaf_modules.*`,
+`ssdmoe_bottleneck.*`, `decoder.*`).
 
 ## 9. Cost and resources
 
@@ -233,27 +220,16 @@ Convolution-dominated cost at `128³`, batch one, with 64/32 decoder taps
 | **T = 2 (primary)** | **12.814** |
 | T = 3 | 18.684 |
 
-Under the strict two-operation convention T = 2 is about 25.63 GFLOPs.
-
-Activation budget: the unique saved spatial activations of the T = 2 AMP graph are
-about 0.69 GiB (0.89 GiB counting saved references), so the correction branch adds
-roughly 1.0–1.5 GiB of backward overhead on top of the frozen baseline forward.
-Estimated peaks follow from that: about 4.5–6.0 GiB when only HERC trains, ~7–10
-GiB if the final decoder stage is also opened, and 12.5 GiB or more if the SSD-MoE
-bottleneck is unfrozen, which is therefore not the default. All of these are
-analytical estimates, not CUDA measurements.
+Under the strict two-operation convention T = 2 is about 25.63 GFLOPs. These are
+analytical convolution counts of the released cell, not profiler outputs.
 
 ## 10. Code conventions
 
-- the method is `HERC`, never abbreviated in identifiers except in tensor keys;
-- modules are 3D by construction, so class names carry no topology suffix
-  (`ConvNormAct`, not `ConvNormAct3d`);
-- experts are named after the action they perform
-  (`BoundaryCorrectionExpert`, not `FullResolutionBoundaryExpert3D`);
+- the method is `HERC`; tensor keys use the paper symbols;
+- modules are 3D by construction, so class names carry no topology suffix;
+- experts are named after the action they perform (`BoundaryCorrectionExpert`);
 - the correction sub-module is reachable as `model.herc` and owns `herc.*` weights;
-- every setting has a `HERC_<NAME>` environment variable (Section 7);
-- one module docstring per file states which section of the manuscript it
-  implements.
+- one module docstring per file names the section of the manuscript it implements.
 
 ## 11. Verification
 
@@ -266,7 +242,7 @@ python -m nnunetv2.tests.herc.test_herc_core
 python -m nnunetv2.tests.herc.test_herc_loss
 ```
 
-Checked on the released tree: all 188 Python modules parse and their intra-project
+Checked on the released tree: every Python module parses and its intra-project
 imports resolve; every configuration and loss default is the value reported in
 Section 5; the layer construction reproduces the parameter table of Section 9.
 Running an end-to-end forward and backward pass requires `mamba_ssm`,

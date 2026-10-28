@@ -1,6 +1,6 @@
 """Diagnostic cues and morphological operators of the HERC correction cell.
 
-Section 3.2 of the manuscript defines four cues for the coarse state of the
+Section 3.2.2 of the manuscript defines four cues for the coarse state of the
 prediction: the mean normalised Bernoulli entropy, the threshold ambiguity, the
 magnitude of the probability gradient and the hierarchy cue of Equation 1.  The
 same module hosts the soft morphological band used by the boundary expert.

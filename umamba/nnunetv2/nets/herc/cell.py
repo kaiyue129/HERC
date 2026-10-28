@@ -1,9 +1,10 @@
 """The shared HERC correction cell and its iterative wrapper.
 
-Section 3.2 of the manuscript: "HERC applies one shared correction cell twice to
-the current logits."  One cell performs diagnose -> typed experts -> bounded
-update; :class:`HERCCorrector` applies the same cell for ``T`` steps, re-diagnosing
-the updated state before every step after the first.
+Section 3.2.5 of the manuscript: the updated logits are passed through the same
+cell again, so the second step responds to the residual errors left by the first;
+the same cell is reused for two correction steps.  One cell performs diagnose ->
+typed experts -> bounded update; :class:`HERCCorrector` applies it for ``T`` steps,
+re-diagnosing the updated state before every step after the first.
 """
 
 from __future__ import annotations

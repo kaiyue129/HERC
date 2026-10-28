@@ -1,4 +1,4 @@
-"""Diagnosis stage of the HERC correction cell (Section 3.2, Figure 3).
+"""Diagnosis stage of the HERC correction cell (Section 3.2.2, Figure 3).
 
 The diagnosis operates at the penultimate decoder resolution (64^3 for the BraTS
 configuration).  It concatenates a 32-channel projection of the coarse feature
